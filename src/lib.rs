@@ -78,6 +78,7 @@ pub fn audit(input: &Path, options: &AuditOptions) -> Result<Report> {
     let mut identities: HashMap<[u8; 32], HashSet<String>> = HashMap::new();
     let mut groups: HashMap<[u8; 32], HashSet<String>> = HashMap::new();
     let mut sample_keys: HashSet<[u8; 32]> = HashSet::new();
+    let mut seen_splits: HashSet<String> = HashSet::new();
     let mut tracking_bytes = 0_usize;
 
     loop {
@@ -128,6 +129,7 @@ pub fn audit(input: &Path, options: &AuditOptions) -> Result<Report> {
                 continue;
             }
         };
+        seen_splits.insert(record.split.clone());
 
         track_sample(
             &record.split,
@@ -173,6 +175,12 @@ pub fn audit(input: &Path, options: &AuditOptions) -> Result<Report> {
                 "A declared group occurs in a declared leakage pair",
             )?;
         }
+    }
+    if pairs
+        .iter()
+        .any(|(left, right)| !seen_splits.contains(left) || !seen_splits.contains(right))
+    {
+        bail!("every declared leakage pair must reference two splits present in valid records");
     }
     Ok(report)
 }

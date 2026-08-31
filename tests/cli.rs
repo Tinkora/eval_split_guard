@@ -12,19 +12,29 @@ fn exits_zero_for_clean_input_and_one_for_findings() {
     let clean = dir.path().join("clean.jsonl");
     fs::write(
         &clean,
-        "{\"schema_version\":1,\"split\":\"train\",\"sample_id\":\"a\",\"content\":\"alpha\"}\n",
+        "{\"schema_version\":1,\"split\":\"train\",\"sample_id\":\"a\",\"content\":\"alpha\"}\n{\"schema_version\":1,\"split\":\"test\",\"sample_id\":\"b\",\"content\":\"beta\"}\n",
     )
     .unwrap();
     let status = command()
-        .args(["audit", clean.to_str().unwrap(), "--pair", "train:test"])
+        .args([
+            "audit",
+            clean.to_str().unwrap(),
+            "--leakage-pair",
+            "train:test",
+        ])
         .status()
         .unwrap();
     assert_eq!(status.code(), Some(0));
 
     let bad = dir.path().join("bad.jsonl");
-    fs::write(&bad, "{bad\n").unwrap();
+    fs::write(&bad, "{bad\n{\"schema_version\":1,\"split\":\"train\",\"sample_id\":\"a\",\"content\":\"alpha\"}\n{\"schema_version\":1,\"split\":\"test\",\"sample_id\":\"b\",\"content\":\"beta\"}\n").unwrap();
     let status = command()
-        .args(["audit", bad.to_str().unwrap(), "--pair", "train:test"])
+        .args([
+            "audit",
+            bad.to_str().unwrap(),
+            "--leakage-pair",
+            "train:test",
+        ])
         .status()
         .unwrap();
     assert_eq!(status.code(), Some(1));
@@ -40,7 +50,29 @@ fn exits_two_for_input_contract_errors() {
     )
     .unwrap();
     let status = command()
-        .args(["audit", input.to_str().unwrap(), "--pair", "train:train"])
+        .args([
+            "audit",
+            input.to_str().unwrap(),
+            "--leakage-pair",
+            "train:train",
+        ])
+        .status()
+        .unwrap();
+    assert_eq!(status.code(), Some(2));
+
+    let status = command()
+        .args(["audit", input.to_str().unwrap()])
+        .status()
+        .unwrap();
+    assert_eq!(status.code(), Some(2));
+
+    let status = command()
+        .args([
+            "audit",
+            input.to_str().unwrap(),
+            "--leakage-pair",
+            "train:test",
+        ])
         .status()
         .unwrap();
     assert_eq!(status.code(), Some(2));

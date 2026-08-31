@@ -23,7 +23,7 @@ Each UTF-8 JSONL record is a strict object:
 - `group_id`: optional non-empty string, at most 256 bytes.
 - Unknown fields are rejected.
 
-Leakage pairs are unordered and must be explicitly supplied using repeatable `--pair FROM:TO` arguments. Cross-split reuse outside those pairs is not reported.
+Leakage pairs are unordered and must be explicitly supplied using repeatable `--leakage-pair FROM:TO` arguments. Cross-split reuse outside those pairs is not reported. Every referenced split must occur in at least one valid record; otherwise the invocation is incomplete and exits `2`.
 
 ## Outputs and exit codes
 

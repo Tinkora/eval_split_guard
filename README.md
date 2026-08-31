@@ -26,8 +26,8 @@ Create a UTF-8 JSONL manifest. Each record must contain `schema_version`, `split
 Declare every cross-split relationship that should be treated as leakage:
 
 ```bash
-eval_split_guard audit manifest.jsonl --pair train:test --pair validation:test
-eval_split_guard audit manifest.jsonl --pair train:test --format json
+eval_split_guard audit manifest.jsonl --leakage-pair train:test --leakage-pair validation:test
+eval_split_guard audit manifest.jsonl --leakage-pair train:test --format json
 ```
 
 Exit codes are `0` for a complete clean audit, `1` for a complete audit with findings, and `2` when input or resource limits prevent a complete audit.
@@ -52,6 +52,7 @@ Exit codes are `0` for a complete clean audit, `1` for a complete audit with fin
 - Output contains only the input basename, line numbers, fixed finding codes, severities, and fixed messages. It never contains content, `sample_id`, `group_id`, hashes, or absolute paths.
 - Maximum input size: 64 MiB; record size: 1 MiB; records: 100,000; diagnostic entries: 10,000; estimated tracking memory: 64 MiB.
 - Reaching a global resource limit returns exit code `2`; an oversized individual record produces `ESG001` and scanning continues.
+- Every split named by `--leakage-pair` must occur in at least one valid record, or the audit returns exit code `2`.
 
 ## Project status
 

@@ -13,7 +13,7 @@ struct Cli {
 enum Command {
     Audit {
         input: PathBuf,
-        #[arg(long = "pair", required = true, value_parser = parse_pair)]
+        #[arg(long = "leakage-pair", required = true, value_parser = parse_pair)]
         leakage_pairs: Vec<(String, String)>,
         #[arg(long, value_enum, default_value = "text")]
         format: OutputFormat,

@@ -26,8 +26,8 @@ cargo build --release --locked
 显式声明哪些跨 split 关系应被视为泄漏：
 
 ```bash
-eval_split_guard audit manifest.jsonl --pair train:test --pair validation:test
-eval_split_guard audit manifest.jsonl --pair train:test --format json
+eval_split_guard audit manifest.jsonl --leakage-pair train:test --leakage-pair validation:test
+eval_split_guard audit manifest.jsonl --leakage-pair train:test --format json
 ```
 
 退出码：完整且无发现为 `0`，完整但有发现为 `1`，输入或资源限制导致无法完成审计为 `2`。
@@ -52,6 +52,7 @@ eval_split_guard audit manifest.jsonl --pair train:test --format json
 - 输出仅包含输入文件名、行号、固定发现代码、严重性和固定消息；绝不包含内容、`sample_id`、`group_id`、hash 或绝对路径。
 - 输入最大 64 MiB，单条记录最大 1 MiB，最多 100,000 条记录、10,000 条诊断，估算跟踪内存上限 64 MiB。
 - 达到全局资源上限返回退出码 `2`；单条记录超限产生 `ESG001` 并继续扫描。
+- `--leakage-pair` 中的每个 split 都必须至少出现在一条有效记录中，否则审计返回退出码 `2`。
 
 ## 项目状态
 

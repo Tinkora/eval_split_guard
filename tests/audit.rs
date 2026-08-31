@@ -95,7 +95,8 @@ fn rejects_uppercase_content_sha256() {
         format!(
             "{{\"schema_version\":1,\"split\":\"train\",\"sample_id\":\"a\",\"content_sha256\":\"{}\"}}\n",
             "A".repeat(64)
-        ),
+        ) + &record("train", "valid-train", "train-only", None)
+            + &record("test", "valid-test", "test-only", None),
     )
     .unwrap();
     let report = audit(&input, &options()).unwrap();
@@ -109,9 +110,10 @@ fn drains_oversized_record_and_continues() {
     let mut bytes = vec![b'x'; 1024 * 1024 + 1];
     bytes.push(b'\n');
     bytes.extend_from_slice(record("train", "a", "valid", None).as_bytes());
+    bytes.extend_from_slice(record("test", "b", "also-valid", None).as_bytes());
     fs::write(&input, bytes).unwrap();
     let report = audit(&input, &options()).unwrap();
-    assert_eq!(report.records, 2);
+    assert_eq!(report.records, 3);
     assert_eq!(report.findings.len(), 1);
     assert_eq!(report.findings[0].code, "ESG001");
 }
@@ -120,9 +122,9 @@ fn drains_oversized_record_and_continues() {
 fn distinguishes_malformed_records_from_schema_defects() {
     let dir = tempdir().unwrap();
     let input = dir.path().join("bad.jsonl");
-    fs::write(&input, "{bad json\n{\"schema_version\":2,\"split\":\"train\",\"sample_id\":\"a\",\"content\":\"x\"}\n{\"schema_version\":1,\"split\":\"train\",\"sample_id\":\"a\",\"content\":\"x\",\"content_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}\n{\"schema_version\":1,\"split\":\"test\",\"sample_id\":\"b\",\"content_sha256\":\"xyz\"}\n").unwrap();
+    fs::write(&input, format!("{{bad json\n{{\"schema_version\":2,\"split\":\"train\",\"sample_id\":\"a\",\"content\":\"x\"}}\n{{\"schema_version\":1,\"split\":\"train\",\"sample_id\":\"a\",\"content\":\"x\",\"content_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}\n{{\"schema_version\":1,\"split\":\"test\",\"sample_id\":\"b\",\"content_sha256\":\"xyz\"}}\n{}{}", record("train", "valid-train", "train-valid", None), record("test", "valid-test", "test-valid", None))).unwrap();
     let report = audit(&input, &options()).unwrap();
-    assert_eq!(report.records, 4);
+    assert_eq!(report.records, 6);
     assert_eq!(
         report
             .findings
@@ -148,10 +150,11 @@ fn detects_duplicate_sample_and_same_split_content_and_group() {
     fs::write(
         &input,
         format!(
-            "{}{}{}",
+            "{}{}{}{}",
             record("train", "a", "same", Some("family")),
             record("train", "a", "other", None),
-            record("train", "b", "same", Some("family"))
+            record("train", "b", "same", Some("family")),
+            record("test", "c", "test-clean", Some("test-family"))
         ),
     )
     .unwrap();
@@ -175,9 +178,10 @@ fn ignores_cross_split_reuse_outside_explicit_pairs() {
     fs::write(
         &input,
         format!(
-            "{}{}",
+            "{}{}{}",
             record("train", "a", "same", Some("family")),
-            record("validation", "b", "same", Some("family"))
+            record("validation", "b", "same", Some("family")),
+            record("test", "c", "test-clean", Some("test-family"))
         ),
     )
     .unwrap();
@@ -193,6 +197,14 @@ fn rejects_invalid_leakage_pairs_as_input_errors() {
         leakage_pairs: vec![("train".into(), "train".into())],
     };
     assert!(audit(&input, &invalid).is_err());
+}
+
+#[test]
+fn rejects_declared_pairs_when_a_split_is_absent() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("manifest.jsonl");
+    fs::write(&input, record("train", "a", "x", None)).unwrap();
+    assert!(audit(&input, &options()).is_err());
 }
 
 #[test]
@@ -224,7 +236,15 @@ fn fails_closed_when_record_limit_is_exceeded() {
 fn json_report_uses_stable_schema() {
     let dir = tempdir().unwrap();
     let input = dir.path().join("bad.jsonl");
-    fs::write(&input, "{bad\n").unwrap();
+    fs::write(
+        &input,
+        format!(
+            "{{bad\n{}{}",
+            record("train", "a", "train-valid", None),
+            record("test", "b", "test-valid", None)
+        ),
+    )
+    .unwrap();
     let value: serde_json::Value = serde_json::from_str(
         &render(&audit(&input, &options()).unwrap(), OutputFormat::Json).unwrap(),
     )
