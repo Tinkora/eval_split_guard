@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [0.1.0-alpha.3] - 2026-08-31
+
+### Fixed
+
+- Removed CI runner-local URIs from CycloneDX component and dependency references.
+- Added fail-closed release contracts for local URIs, duplicate component references, and dangling dependencies.
+
 ## [0.1.0-alpha.2] - 2026-08-31
 
 ### Fixed
