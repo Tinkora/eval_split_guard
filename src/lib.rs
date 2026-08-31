@@ -408,7 +408,7 @@ enum BoundedLine {
 fn read_bounded_line(reader: &mut impl BufRead) -> Result<Option<BoundedLine>> {
     let mut bytes = Vec::new();
     let read = {
-        let mut limited = std::io::Read::take(&mut *reader, (MAX_RECORD_BYTES + 1) as u64);
+        let mut limited = std::io::Read::take(&mut *reader, (MAX_RECORD_BYTES + 2) as u64);
         limited
             .read_until(b'\n', &mut bytes)
             .context("could not read input")?
@@ -416,7 +416,14 @@ fn read_bounded_line(reader: &mut impl BufRead) -> Result<Option<BoundedLine>> {
     if read == 0 {
         return Ok(None);
     }
-    let oversized = bytes.len() > MAX_RECORD_BYTES;
+    let delimiter_bytes = if bytes.ends_with(b"\r\n") {
+        2
+    } else if bytes.ends_with(b"\n") {
+        1
+    } else {
+        0
+    };
+    let oversized = bytes.len().saturating_sub(delimiter_bytes) > MAX_RECORD_BYTES;
     if oversized && !bytes.ends_with(b"\n") {
         drain_to_newline(reader)?;
     }

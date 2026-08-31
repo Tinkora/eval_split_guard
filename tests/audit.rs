@@ -119,6 +119,26 @@ fn drains_oversized_record_and_continues() {
 }
 
 #[test]
+fn accepts_a_record_exactly_at_the_payload_limit() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("max_record.jsonl");
+    let prefix = r#"{"schema_version":1,"split":"train","sample_id":"a","content":""#;
+    let suffix = "\"}";
+    let content = "x".repeat(1024 * 1024 - prefix.len() - suffix.len());
+    let exact_record = format!("{prefix}{content}{suffix}\n");
+    assert_eq!(exact_record.len() - 1, 1024 * 1024);
+    fs::write(
+        &input,
+        exact_record + &record("test", "b", "test-content", None),
+    )
+    .unwrap();
+
+    let report = audit(&input, &options()).unwrap();
+    assert!(report.findings.is_empty());
+    assert_eq!(report.records, 2);
+}
+
+#[test]
 fn distinguishes_malformed_records_from_schema_defects() {
     let dir = tempdir().unwrap();
     let input = dir.path().join("bad.jsonl");
