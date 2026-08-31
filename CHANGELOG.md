@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [0.1.0-alpha.4] - 2026-08-31
+
+### Fixed
+
+- Added bounded retries for GitHub draft Release discovery and cleanup after API visibility lag.
+
 ## [0.1.0-alpha.3] - 2026-08-31
 
 ### Fixed
