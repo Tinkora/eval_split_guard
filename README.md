@@ -58,7 +58,7 @@ JSON reports use `schema_version: 1`, `kind: "eval_split_guard"`, and `complete:
 
 ## Project status
 
-`v0.1.0-alpha.2` is intentionally narrow. Exact equality and caller-supplied grouping provide deterministic evidence; they do not prove model-training contamination or semantic similarity.
+`v0.1.0-alpha.3` is intentionally narrow. Exact equality and caller-supplied grouping provide deterministic evidence; they do not prove model-training contamination or semantic similarity.
 
 ## Community
 
