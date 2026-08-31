@@ -38,6 +38,7 @@ pub struct Finding {
 pub struct Report {
     pub schema_version: u8,
     pub kind: &'static str,
+    pub complete: bool,
     pub input: String,
     pub records: u64,
     pub findings: Vec<Finding>,
@@ -71,6 +72,7 @@ pub fn audit(input: &Path, options: &AuditOptions) -> Result<Report> {
     let mut report = Report {
         schema_version: 1,
         kind: "eval_split_guard",
+        complete: true,
         input: safe_basename(input),
         records: 0,
         findings: Vec::new(),

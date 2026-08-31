@@ -27,7 +27,7 @@
 
 ## 输出与退出码
 
-文本和带版本的 JSON 输出只包含文件名、计数、行号、固定代码、严重性和固定消息。禁止输出内容、标识、分组、hash 和绝对路径。
+文本和带版本的 JSON 输出只包含文件名、计数、行号、固定代码、严重性和固定消息。禁止输出内容、标识、分组、hash 和绝对路径。完整 JSON 报告包含 `complete: true`。JSON 模式以 `2` 退出时输出 `complete: false`、固定 `error_code: "incomplete_audit"` 和固定消息 `Audit could not be completed because input or resource validation failed`，不包含任何源自输入的值。文本模式错误仍写入 stderr。
 
 - `0`：完整审计且没有发现。
 - `1`：完整审计且存在至少一个发现。

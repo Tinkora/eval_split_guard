@@ -32,6 +32,8 @@ eval_split_guard audit manifest.jsonl --leakage-pair train:test --format json
 
 退出码：完整且无发现为 `0`，完整但有发现为 `1`，输入或资源限制导致无法完成审计为 `2`。
 
+JSON 报告包含 `schema_version: 1`、`kind: "eval_split_guard"` 和 `complete: true`。当 `--format json` 无法完成审计时，退出码 `2` 会输出隐私安全的 JSON envelope，其中包含 `complete: false`、固定 `error_code` `incomplete_audit` 和固定消息。文本模式错误仍写入 stderr。
+
 ## 发现代码
 
 | 代码 | 含义 | 严重性 |

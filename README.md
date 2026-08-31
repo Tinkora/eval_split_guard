@@ -32,6 +32,8 @@ eval_split_guard audit manifest.jsonl --leakage-pair train:test --format json
 
 Exit codes are `0` for a complete clean audit, `1` for a complete audit with findings, and `2` when input or resource limits prevent a complete audit.
 
+JSON reports use `schema_version: 1`, `kind: "eval_split_guard"`, and `complete: true`. When `--format json` cannot complete an audit, exit code `2` emits a privacy-safe JSON envelope with `complete: false`, the fixed `error_code` `incomplete_audit`, and a fixed message. Text-mode errors remain on stderr.
+
 ## Findings
 
 | Code | Meaning | Severity |

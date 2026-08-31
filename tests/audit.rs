@@ -251,6 +251,7 @@ fn json_report_uses_stable_schema() {
     .unwrap();
     assert_eq!(value["schema_version"], 1);
     assert_eq!(value["kind"], "eval_split_guard");
+    assert_eq!(value["complete"], true);
 }
 
 #[cfg(unix)]

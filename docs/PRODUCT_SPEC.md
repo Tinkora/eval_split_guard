@@ -27,7 +27,7 @@ Leakage pairs are unordered and must be explicitly supplied using repeatable `--
 
 ## Outputs and exit codes
 
-Text and versioned JSON outputs contain only basename, counts, line numbers, fixed codes, severities, and fixed messages. Content, identifiers, groups, hashes, and absolute paths are forbidden.
+Text and versioned JSON outputs contain only basename, counts, line numbers, fixed codes, severities, and fixed messages. Content, identifiers, groups, hashes, and absolute paths are forbidden. Complete JSON reports include `complete: true`. JSON-mode exit `2` emits `complete: false`, fixed `error_code: "incomplete_audit"`, and the fixed message `Audit could not be completed because input or resource validation failed`; it omits all input-derived values. Text-mode errors remain on stderr.
 
 - `0`: complete audit with no findings.
 - `1`: complete audit with one or more findings.
