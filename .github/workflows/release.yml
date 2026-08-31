@@ -41,6 +41,7 @@ jobs:
       - name: Run quality gate
         run: |
           ruby scripts/test_release_workflow.rb
+          ruby scripts/test_normalize_cyclonedx_sbom.rb
           rustup toolchain install 1.85.0 --profile minimal --component rustfmt,clippy --no-self-update
           cargo +1.85.0 fmt --all -- --check
           cargo +1.85.0 test --locked
@@ -83,6 +84,7 @@ jobs:
           set -euo pipefail
           cargo install cargo-cyclonedx --version 0.5.9 --locked
           cargo cyclonedx --format json --describe crate
+          ruby scripts/normalize_cyclonedx_sbom.rb eval_split_guard.cdx.json
           mkdir dist
           mv eval_split_guard.cdx.json dist/SBOM.cdx.json
           cargo metadata --locked --format-version 1 | jq '[.packages[] | {name, version, license}]' > dist/LICENSES.json

@@ -24,6 +24,10 @@ jobs:
         run: npx --yes markdownlint-cli2@0.20.0 '**/*.md'
       - name: Check bilingual documentation and internal links
         run: ruby scripts/check_docs.rb
+      - name: Check release supply-chain contracts
+        run: |
+          ruby scripts/test_release_workflow.rb
+          ruby scripts/test_normalize_cyclonedx_sbom.rb
       - name: Install verified actionlint
         shell: bash
         run: |

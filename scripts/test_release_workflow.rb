@@ -11,6 +11,9 @@ YAML.safe_load(workflow, aliases: true)
 
 required_fragments = [
   "ruby scripts/test_release_workflow.rb",
+  "ruby scripts/test_normalize_cyclonedx_sbom.rb",
+  "ruby scripts/normalize_cyclonedx_sbom.rb eval_split_guard.cdx.json",
+  'predicate-type: "https://tinkora.dev/attestations/release-evidence/v1"',
   'git cat-file -t "refs/tags/${GITHUB_REF_NAME}"',
   '[[ "${tag_type}" == "tag" ]]',
   'expected_assets=(',
