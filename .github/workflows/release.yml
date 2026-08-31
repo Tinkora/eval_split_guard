@@ -156,22 +156,47 @@ jobs:
           fi
 
           release_id=""
+          draft_created=false
           cleanup() {
-            if [[ -n "${release_id}" ]]; then
-              gh api --method DELETE \
-                "repos/${GITHUB_REPOSITORY}/releases/${release_id}" >/dev/null || true
+            if [[ "${draft_created}" == true ]]; then
+              if [[ -n "${release_id}" ]]; then
+                gh api --method DELETE \
+                  "repos/${GITHUB_REPOSITORY}/releases/${release_id}" >/dev/null || true
+              else
+                while IFS= read -r candidate_id; do
+                  gh api --method DELETE \
+                    "repos/${GITHUB_REPOSITORY}/releases/${candidate_id}" >/dev/null || true
+                done < <(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
+                  --jq '.[] | select(.tag_name == env.GITHUB_REF_NAME and .draft == true) | .id' \
+                  2>/dev/null || true)
+              fi
             fi
           }
           trap cleanup EXIT
 
+          draft_created=true
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" "${release_args[@]}"
-          release_id="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq .id)"
+          release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate --jq '
+            [.[] | select(.tag_name == env.GITHUB_REF_NAME and .draft == true)]
+            | if length == 1 then .[0].id else error("expected exactly one matching draft") end
+          ')"
 
           mkdir released-assets
-          gh release download "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" --dir released-assets
+          if ! diff -u \
+            <(printf '%s\n' "${expected_assets[@]}" | LC_ALL=C sort) \
+            <(gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets" --paginate \
+              --jq '.[].name' | LC_ALL=C sort); then
+            echo "unexpected draft asset inventory" >&2
+            exit 1
+          fi
+          while IFS=$'\t' read -r asset_id asset_name; do
+            gh api \
+              -H 'Accept: application/octet-stream' \
+              "repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" \
+              > "released-assets/${asset_name}"
+          done < <(gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets" \
+            --paginate --jq '.[] | [.id, .name] | @tsv')
           if ! diff -u \
             <(printf '%s\n' "${expected_assets[@]}" | LC_ALL=C sort) \
             <(find released-assets -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort); then
