@@ -159,18 +159,61 @@ jobs:
 
           release_id=""
           draft_created=false
+          resolve_draft_release_id() {
+            local attempt candidate_output matching_count
+            local -a matching_ids
+            for attempt in {1..6}; do
+              candidate_output=""
+              if candidate_output="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
+                --jq '.[] | select(.tag_name == env.GITHUB_REF_NAME and .draft == true) | .id')"; then
+                matching_ids=()
+                while IFS= read -r candidate_id; do
+                  [[ -n "${candidate_id}" ]] && matching_ids+=("${candidate_id}")
+                done <<< "${candidate_output}"
+                matching_count="${#matching_ids[@]}"
+                if [[ "${matching_count}" -eq 1 ]]; then
+                  printf '%s\n' "${matching_ids[0]}"
+                  return 0
+                fi
+                if [[ "${matching_count}" -gt 1 ]]; then
+                  echo "multiple matching drafts found for ${GITHUB_REF_NAME}" >&2
+                  return 1
+                fi
+                [[ "${matching_count}" -eq 0 ]]
+              fi
+              if [[ "${attempt}" -lt 6 ]]; then
+                sleep "$((attempt * 2))"
+              fi
+            done
+            echo "draft did not become visible after bounded retries" >&2
+            return 1
+          }
+          delete_release_with_retry() {
+            local candidate_id="$1"
+            local attempt
+            for attempt in {1..6}; do
+              if gh api --method DELETE \
+                "repos/${GITHUB_REPOSITORY}/releases/${candidate_id}" >/dev/null; then
+                return 0
+              fi
+              if [[ "${attempt}" -lt 6 ]]; then
+                sleep "$((attempt * 2))"
+              fi
+            done
+            echo "failed to delete draft release ${candidate_id} after bounded retries" >&2
+            return 1
+          }
           cleanup() {
             if [[ "${draft_created}" == true ]]; then
-              if [[ -n "${release_id}" ]]; then
-                gh api --method DELETE \
-                  "repos/${GITHUB_REPOSITORY}/releases/${release_id}" >/dev/null || true
-              else
-                while IFS= read -r candidate_id; do
-                  gh api --method DELETE \
-                    "repos/${GITHUB_REPOSITORY}/releases/${candidate_id}" >/dev/null || true
-                done < <(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
-                  --jq '.[] | select(.tag_name == env.GITHUB_REF_NAME and .draft == true) | .id' \
-                  2>/dev/null || true)
+              local candidate_id="${release_id}"
+              if [[ -z "${candidate_id}" ]]; then
+                if ! candidate_id="$(resolve_draft_release_id)"; then
+                  echo "unable to resolve the draft release during cleanup" >&2
+                  return 0
+                fi
+              fi
+              if ! delete_release_with_retry "${candidate_id}"; then
+                echo "unable to clean up draft release ${candidate_id}" >&2
               fi
             fi
           }
@@ -179,10 +222,7 @@ jobs:
           draft_created=true
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" "${release_args[@]}"
-          release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate --jq '
-            [.[] | select(.tag_name == env.GITHUB_REF_NAME and .draft == true)]
-            | if length == 1 then .[0].id else error("expected exactly one matching draft") end
-          ')"
+          release_id="$(resolve_draft_release_id)"
 
           mkdir released-assets
           if ! diff -u \

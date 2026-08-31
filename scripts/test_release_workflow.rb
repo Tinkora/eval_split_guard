@@ -24,7 +24,14 @@ required_fragments = [
   'if [[ "${GITHUB_REF_NAME}" == *-* ]]',
   'release_args+=(--prerelease)',
   'sha256sum --check --strict SHA256SUMS',
-  'released-assets'
+  'released-assets',
+  'resolve_draft_release_id()',
+  'delete_release_with_retry()',
+  'for attempt in {1..6}',
+  'matching_count="${#matching_ids[@]}"',
+  'multiple matching drafts found for ${GITHUB_REF_NAME}',
+  'draft did not become visible after bounded retries',
+  'failed to delete draft release ${candidate_id} after bounded retries'
 ]
 
 required_fragments.each do |fragment|
@@ -40,5 +47,16 @@ abort("release workflow has unpinned actions: #{unpinned.map(&:first).join(', ')
 abort("stable releases must not always be prereleases") if workflow.match?(/gh release create[^\n]*--prerelease/)
 abort("draft releases cannot be resolved through the tag endpoint") if workflow.include?("releases/tags/${GITHUB_REF_NAME}")
 abort("gh release download cannot resolve draft releases") if workflow.include?('gh release download "$GITHUB_REF_NAME"')
+
+resolve_body = workflow[/resolve_draft_release_id\(\) \{(?<body>.*?)^          \}/m, :body]
+abort("release workflow is missing the draft resolver body") unless resolve_body
+abort("draft resolver must retry zero matches") unless resolve_body.include?('[[ "${matching_count}" -eq 0 ]]')
+abort("draft resolver must return exactly one match") unless resolve_body.include?('[[ "${matching_count}" -eq 1 ]]')
+abort("draft resolver must fail closed on multiple matches") unless resolve_body.include?('return 1')
+
+cleanup_body = workflow[/cleanup\(\) \{(?<body>.*?)^          \}/m, :body]
+abort("release workflow is missing the cleanup body") unless cleanup_body
+abort("cleanup must use bounded draft resolution") unless cleanup_body.include?('resolve_draft_release_id')
+abort("cleanup must use bounded deletion retries") unless cleanup_body.include?('delete_release_with_retry')
 
 puts "release workflow contract passed"
