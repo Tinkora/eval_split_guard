@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [0.1.0-alpha.2] - 2026-08-31
+
+### Fixed
+
+- Fixed draft release discovery and asset download so pre-publication verification works with GitHub draft semantics.
+
 ## [0.1.0-alpha.1] - 2026-08-31
 
 ### Added
